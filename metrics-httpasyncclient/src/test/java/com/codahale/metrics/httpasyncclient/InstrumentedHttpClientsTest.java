@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.MetricRegistryListener;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.httpclient.HttpClientMetricNameStrategy;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
@@ -19,36 +20,36 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class InstrumentedHttpClientsTest {
-
-    @Mock
-    private HttpClientMetricNameStrategy metricNameStrategy;
-
-    @Mock
-    private MetricRegistryListener registryListener;
+public class InstrumentedHttpClientsTest extends HttpClientTestBase {
 
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
-    private HttpAsyncClient hac;
+    private HttpAsyncClient asyncHttpClient;
 
-    @Before
-    public void setUp() throws Exception {
-        CloseableHttpAsyncClient chac = new InstrumentedNHttpClientBuilder(metricRegistry, metricNameStrategy).build();
-        chac.start();
-        hac = chac;
-        metricRegistry.addListener(registryListener);
-    }
+    @Mock
+    private HttpClientMetricNameStrategy metricNameStrategy;
+    @Mock
+    private MetricRegistryListener registryListener;
 
     @Test
     public void registersExpectedMetricsGivenNameStrategy() throws Exception {
-        final HttpGet get = new HttpGet("http://example.com?q=anything");
+        HttpHost host = startServerWithGlobalRequestHandler(STATUS_OK);
+        final HttpGet get = new HttpGet("/q=anything");
         final String metricName = "some.made.up.metric.name";
 
         when(metricNameStrategy.getNameFor(anyString(), any(HttpRequest.class)))
                 .thenReturn(metricName);
 
-        hac.execute(get,null).get();
+        asyncHttpClient.execute(host, get, null).get();
 
         verify(registryListener).onTimerAdded(eq(metricName), any(Timer.class));
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        CloseableHttpAsyncClient chac = new InstrumentedNHttpClientBuilder(metricRegistry, metricNameStrategy).build();
+        chac.start();
+        asyncHttpClient = chac;
+        metricRegistry.addListener(registryListener);
     }
 }
