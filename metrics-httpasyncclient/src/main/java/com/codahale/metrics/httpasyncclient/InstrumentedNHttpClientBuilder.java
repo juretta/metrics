@@ -66,9 +66,9 @@ public class InstrumentedNHttpClientBuilder extends HttpAsyncClientBuilder {
                 try {
                     timerContext = timer(requestProducer.generateRequest()).time();
                 } catch (IOException ex) {
-                    throw new AssertionError(ex);
+                    throw new RuntimeException(ex);
                 } catch (HttpException ex) {
-                    throw new AssertionError(ex);
+                    throw new RuntimeException(ex);
                 }
                 return ac.execute(requestProducer, responseConsumer, context,
                         new TimingFutureCallback<T>(callback, timerContext));
